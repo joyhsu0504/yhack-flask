@@ -9,6 +9,7 @@ app = Flask(__name__)
 def get_deal():
 	content = request.get_json()
 	currTags = content['entities'] 
+	print currTags
 	#currTags = ["skyscraper", "city"] #need image tag
 	targetAirport = str(getAirport(currTags))
 	#print targetAirport
@@ -53,7 +54,7 @@ def getAirport(currTags):
 	highestMatchAirport = ''
 	for index, row in airport_df.iterrows():
 		airportTagsStr = row['entities']
-		airportTags = airportTagsStr.split(", ")   
+		airportTags = airportTagsStr.split(",")   
 		tagCount = getMatchingTagCount(currTags, airportTags)
 		if (tagCount > highestMatchCount):
 			highestMatchCount = tagCount
