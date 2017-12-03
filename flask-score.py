@@ -1,17 +1,25 @@
-#!flask/bin/python
+#!flask2/bin/python
 from math import cos, asin, sqrt
 from flask import Flask, jsonify, request
 import pandas as pd
+import json
 
 app = Flask(__name__)
 
-@app.route('/jetblue/api/get_deal', methods=['GET'])
+@app.route('/jetblue/api/get_deal', methods=['POST'])
 def get_deal():
-	content = request.get_json(silent=True)
-	currTags = content['entities'] #currTags = ["skyscraper", "city"] #need image tag
+	content = request.get_json()
+	currTags = content['entities'] 
+	#currTags = ["skyscraper", "city"] #need image tag
 	targetAirport = str(getAirport(currTags))
 	#print targetAirport
-	return jsonify({getDeal(targetAirport, content['lat'], content['lon'])}) #need curr location
+	deal = getDeal(targetAirport, content['lat'], content['lon'])
+	keys = ["OriginAirportCode", "DestinationAirportCode", "FlightType", "FareType", "FinalScore", "FareDollarAmount", "TaxDollarAmount", "FarePointsAmount", "TaxPointsAmount"]
+	deal_dict = dict(zip(keys, deal))
+	print json.dumps(deal_dict)
+	return json.dumps(deal_dict)
+	#print jsonify({getDeal(targetAirport, content['lat'], content['lon'])})
+	#return jsonify({getDeal(targetAirport, content['lat'], content['lon'])}) #need curr location
 
 def main():
 	'''currTags = ["skyscraper", "city"] #need image tag
@@ -38,7 +46,7 @@ def getDeal(targetAirport, lat, lon):
 	#print 'closest airport ' + closestAirport
 	lables_df = findMatch(labels_df, targetAirport, closestAirport)
 	labels_df = highestScore(labels_df)
-	return labels_df
+	return labels_df.values.tolist()
 
 def getAirport(currTags):
 	airport_df = pd.read_csv("airportEntities.csv")
@@ -99,3 +107,4 @@ def highestScore(labels_df):
 if __name__ == '__main__':
 	#main()
 	app.run(debug=True)
+	get_deal()
