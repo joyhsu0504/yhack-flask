@@ -1,4 +1,3 @@
-#!flask2/bin/python
 from math import cos, asin, sqrt
 from flask import Flask, jsonify, request
 import pandas as pd
@@ -10,7 +9,7 @@ app = Flask(__name__)
 @app.route('/jetblue/api/get_deal', methods=['POST'])
 def get_deal():
 	content = request.get_json()
-	currTags = content['entities'] 
+	currTags = content['entities']
 	targetAirport = str(getAirport(currTags))
 	deal = getDeal(targetAirport, content['lat'], content['lon'])
 	keys = ["OriginAirportCode", "DestinationAirportCode", "FlightType", "FareType", "FinalScore", "FareDollarAmount", "TaxDollarAmount", "FarePointsAmount", "TaxPointsAmount"]
