@@ -1,4 +1,3 @@
-#!flask2/bin/python
 from math import cos, asin, sqrt
 from flask import Flask, jsonify, request
 import pandas as pd
