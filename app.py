@@ -1,7 +1,9 @@
+#!flask2/bin/python
 from math import cos, asin, sqrt
 from flask import Flask, jsonify, request
 import pandas as pd
 import json
+import requests
 
 app = Flask(__name__)
 
@@ -9,22 +11,40 @@ app = Flask(__name__)
 def get_deal():
 	content = request.get_json()
 	currTags = content['entities'] 
-	#currTags = ["skyscraper", "city"] #need image tag
 	targetAirport = str(getAirport(currTags))
-	#print targetAirport
 	deal = getDeal(targetAirport, content['lat'], content['lon'])
 	keys = ["OriginAirportCode", "DestinationAirportCode", "FlightType", "FareType", "FinalScore", "FareDollarAmount", "TaxDollarAmount", "FarePointsAmount", "TaxPointsAmount"]
 	deal_dict = dict(zip(keys, deal))
-	print json.dumps(deal_dict)
 	return json.dumps(deal_dict)
-	#print jsonify({getDeal(targetAirport, content['lat'], content['lon'])})
-	#return jsonify({getDeal(targetAirport, content['lat'], content['lon'])}) #need curr location
-
-def main():
-	'''currTags = ["skyscraper", "city"] #need image tag
+	
+@app.route('/jetblue/api/get_photos', methods=['POST'])
+def get_photos():
+	content = request.get_json()
+	currTags = content['entities'] 
 	targetAirport = str(getAirport(currTags))
-	print targetAirport
-	print getDeal(targetAirport, 60, 160) #need curr location'''
+	deal = getDeal(targetAirport, content['lat'], content['lon'])
+	lat, lon = findCoordinate(str(deal[1]))
+	info = getNearbyPlaces(str(lat), str(lon))
+	return info
+	
+def getNearbyPlaces(lat, lon):
+	key = 'AIzaSyDjOV_yQ0Dfxzz6HIO5Z0nzSsh4MIDOrvY'
+	url0 = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + lat + ',' + lon + '&radius=1000&key=' + key
+	response0 = requests.get(url0)
+	responseJson0 = response0.json()
+	print responseJson0
+	datas = []
+	for i in range(0, len(responseJson0['results'])):
+		if 'photos' in responseJson0['results'][i]:
+			photo_reference = responseJson0['results'][i]['photos'][0]['photo_reference']
+			url1 = 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=' + photo_reference + '&key=' + key
+			data = {
+				'name':responseJson0['results'][i]['name'],
+				'vicinity':responseJson0['results'][i]['vicinity'],
+				'photos':url1
+			}
+			datas.append(data)
+	return json.dumps(datas)
 
 def getDeal(targetAirport, lat, lon):
 	labels_df = pd.read_csv("Deals.csv")
@@ -33,16 +53,10 @@ def getDeal(targetAirport, lat, lon):
 	dropCols = [0, 3, 11, 12, 13, 14, 15, 16, 17]
 	for dropCol in dropCols:
 		labels_df = labels_df.drop(cols[dropCol], axis=1)
-		
-	#print labels_df
 	
 	labels_df = returnAirports(labels_df, targetAirport)
-	#print 'new labels '
-	#print labels_df
 	originAirports = labels_df['OriginAirportCode'].values
-	#print 'origin airports ' + originAirports
 	closestAirport = findClosestAirport(originAirports, lat, lon)
-	#print 'closest airport ' + closestAirport
 	lables_df = findMatch(labels_df, targetAirport, closestAirport)
 	labels_df = highestScore(labels_df)
 	return labels_df.values.tolist()
@@ -68,9 +82,14 @@ def getMatchingTagCount(currTags, airportTags):
 	return count
 
 def findCoordinate(locName):
-	code_df = pd.read_csv("airportcodes.csv")
-	code_df = code_df.loc[code_df['locationID'] == locName]
-	return code_df['Latitude'].values, code_df['Longitude'].values
+	key = 'AIzaSyDjOV_yQ0Dfxzz6HIO5Z0nzSsh4MIDOrvY'
+	url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + locName + '&key=' + key
+	response = requests.get(url)
+	responseJson = response.json()
+	if responseJson['status'] == 'OK':
+		return responseJson['results'][0]['geometry']['location']['lat'], responseJson['results'][0]['geometry']['location']['lng']
+	else:
+		return 1, 1
 	
 def findDistance(lat1, lon1, lat2, lon2):
 	p = 0.017453292519943295     #Pi/180
@@ -96,14 +115,13 @@ def findClosestAirport(allLoc, currLocationLat, currLocationLon):
 	
 
 def returnAirports(labels_df, destinationCode):
-	#print labels_df.loc[labels_df['DestinationAirportCode'] == destinationCode]
 	return labels_df.loc[labels_df['DestinationAirportCode'] == destinationCode]
 
 def highestScore(labels_df):
-	#print labels_df.loc[labels_df['FinalScore'].idxmax()]
 	return labels_df.loc[labels_df['FinalScore'].idxmax()]
 
 if __name__ == '__main__':
 	#main()
 	app.run(debug=True)
 	get_deal()
+	get_photos()
