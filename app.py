@@ -67,7 +67,7 @@ def getAirport(currTags):
 	highestMatchAirport = ''
 	for index, row in airport_df.iterrows():
 		airportTagsStr = row['entities']
-		airportTags = airportTagsStr.split(", ")   
+		airportTags = airportTagsStr.split(",")   
 		tagCount = getMatchingTagCount(currTags, airportTags)
 		if (tagCount > highestMatchCount):
 			highestMatchCount = tagCount
